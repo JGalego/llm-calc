@@ -274,7 +274,7 @@ st.markdown(f"""
        <b>Instance Count</b>
     </td>
     <td>
-       <code>{inst_count}</code>
+       <code>{inst_count:,}</code>
     </td>
   </tr>
   <tr>
@@ -282,7 +282,7 @@ st.markdown(f"""
        <b>Checkpoint Size (GB)</b>
     </td>
     <td>
-       <code>{checkpoint_size}</code>
+       <code>{checkpoint_size:,}</code>
     </td>
   </tr>
   <tr>
@@ -290,7 +290,7 @@ st.markdown(f"""
        <b>Training Data Size (GB)</b>
     </td>
     <td>
-       <code>{training_data_size}</code>
+       <code>{training_data_size:,}</code>
     </td>
   </tr>
   <tr>
@@ -298,7 +298,7 @@ st.markdown(f"""
        <b>Real TFLOPs/s/GPU</b>
     </td>
     <td>
-       <code>{r_tflops_per_gpu}</code>
+       <code>{r_tflops_per_gpu:,}</code>
     </td>
   </tr>
   <tr>
@@ -314,7 +314,7 @@ st.markdown(f"""
        <b>Theoretical Training Time (GPU-hours)</b>
     </td>
     <td>
-       <code>{t_training_time}</code>
+       <code>{t_training_time:,}</code>
     </td>
   </tr>
   <tr>
@@ -322,7 +322,7 @@ st.markdown(f"""
        <b>Cluster Theoretical Training Time (days)</b>
     </td>
     <td>
-       <code>{cluster_t_training_time}</code>
+       <code>{cluster_t_training_time:,}</code>
     </td>
   </tr>
   <tr>
@@ -330,7 +330,7 @@ st.markdown(f"""
        <b>Cluster Real Training Time (days)</b>
     </td>
     <td>
-       <code>{cluster_r_training_time}</code>
+       <code>{cluster_r_training_time:,}</code>
     </td>
   </tr>
   <tr>
@@ -338,7 +338,7 @@ st.markdown(f"""
        <b>Expected Failures</b>
     </td>
     <td>
-       <code>{exp_failures}</code>
+       <code>{exp_failures:,}</code>
     </td>
   </tr>
   <tr>
@@ -346,7 +346,7 @@ st.markdown(f"""
        <b>Expected GPU Time in Failed State (GPU-hours)</b>
     </td>
     <td>
-       <code>{exp_gpu_time_in_failed_state}</code>
+       <code>{exp_gpu_time_in_failed_state:,}</code>
     </td>
   </tr>
   <tr>
@@ -354,7 +354,7 @@ st.markdown(f"""
        <b>Expected GPU Time Recomputing Uncheckpointed Work (GPU-hours)</b>
     </td>
     <td>
-       <code>{exp_gpu_time_recomputing_uncheckpointed_work}</code>
+       <code>{exp_gpu_time_recomputing_uncheckpointed_work:,}</code>
     </td>
   </tr>
   <tr>
@@ -362,7 +362,7 @@ st.markdown(f"""
        <b># Checkpoints</b>
     </td>
     <td>
-       <code>{num_checkpoints}</code>
+       <code>{num_checkpoints:,}</code>
     </td>
   </tr>
   <tr>
@@ -370,7 +370,7 @@ st.markdown(f"""
        <b>Cumulative Checkpoint Size (GB)</b>
     </td>
     <td>
-       <code>{cum_checkpoint_size}</code>
+       <code>{cum_checkpoint_size:,}</code>
     </td>
   </tr>
 </table>
@@ -442,7 +442,7 @@ st.markdown(f"""
        <b>Storage</b>
     </td>
     <td>
-       <code>{tot_storage_cost:.2f}{currencies[st.session_state.currency]}</code>
+       <code>{tot_storage_cost:,.2f}{currencies[st.session_state.currency]}</code>
     </td>
   </tr>
   <tr>
@@ -450,7 +450,7 @@ st.markdown(f"""
        <b>Experiments</b>
     </td>
     <td>
-       <code>{tot_experiments_cost:.2f}{currencies[st.session_state.currency]}</code>
+       <code>{tot_experiments_cost:,.2f}{currencies[st.session_state.currency]}</code>
     </td>
   </tr>
   <tr>
@@ -458,7 +458,7 @@ st.markdown(f"""
        <b>Failures (Downtime)</b>
     </td>
     <td>
-       <code>{fail_downtime_cost:.2f}{currencies[st.session_state.currency]}</code>
+       <code>{fail_downtime_cost:,.2f}{currencies[st.session_state.currency]}</code>
     </td>
   </tr>
   <tr>
@@ -466,7 +466,7 @@ st.markdown(f"""
        <b>Failures (Recomputation)</b>
     </td>
     <td>
-       <code>{fail_recomputation_cost:.2f}{currencies[st.session_state.currency]}</code>
+       <code>{fail_recomputation_cost:,.2f}{currencies[st.session_state.currency]}</code>
     </td>
   </tr>
   <tr>
@@ -474,7 +474,7 @@ st.markdown(f"""
        <b>Theoretical Training Cost</b>
     </td>
     <td>
-       <code>{t_training_cost:.2f}{currencies[st.session_state.currency]}</code>
+       <code>{t_training_cost:,.2f}{currencies[st.session_state.currency]}</code>
     </td>
   </tr>
   <tr>
@@ -482,7 +482,7 @@ st.markdown(f"""
        <b style="color:red">Total Training Cost</b>
     </td>
     <td>
-       <code>{tot_training_cost:.2f}{currencies[st.session_state.currency]}</code>
+       <code>{tot_training_cost:,.2f}{currencies[st.session_state.currency]}</code>
     </td>
   </tr>
 </table>
