@@ -17,6 +17,12 @@ import streamlit as st
 st.title("LLM Calculator 🧮")
 st.subheader("How much compute and storage do I need?")
 
+"""
+The purpose of the LLM Calculator is to size an LLM pre-training workload by predicting training duration, storage and compute costs. 
+
+It works with **any** accelerator, provided you have information on hourly price and peak TFLOPs, and **any** model that adheres to the [Transformer FLOPs equation](https://medium.com/@dzmitrybahdanau/the-flops-calculus-of-language-model-training-3b19c1f025e4).
+"""
+
 # Let's assume that the checkpoint size follows the BLOOM ratio
 # 2.3TB / 176 ~ 13GB per billion parameters
 # https://huggingface.co/bigscience/tr11-176B-logs
@@ -25,10 +31,6 @@ BLOOM_RATIO = 2.3e3/176
 # and that the training data contains ~0.2 tokens per byte
 # https://accubits.com/large-language-models-leaderboard/bloom/
 TOKENS_PER_BYTE = 350e9/1.6e12
-
-"""
-The purpose of the LLM Calculator is to size an LLM pre-training workload by predicting training duration, storage and compute costs. It works with **any** accelerator, provided you have information on hourly price and peak TFLOPs, and **any** model that adheres to the [Transformer FLOPs equation](https://medium.com/@dzmitrybahdanau/the-flops-calculus-of-language-model-training-3b19c1f025e4).
-"""
 
 with st.expander("Disclaimer ⚠️"):
     f"""
@@ -62,22 +64,22 @@ st.sidebar.selectbox(
     key='currency'
 )
 
+# How much does it cost to run a single GPU per hour?
 st.sidebar.number_input(
     label='GPU hourly price',
     key='gpu_hourly_price',
     value=2.50 if st.session_state.currency == 'USD' else 2.30,
     step=0.01,
     format='%.2f',
-    help="Use a precise PPA rate if one is available",
 )
 
+# How much does it cost to store 1GB for 1 month?
 st.sidebar.number_input(
-    label='Storage Cost per GB-month',
+    label='Storage Cost (per GB-month)',
     key='storage_cost',
     value=0.022 if st.session_state.currency == 'USD' else 0.020,
     step=0.001,
     format='%.3f',
-    help="Default value assumes S3 Standard tier",
 )
 
 """
@@ -85,7 +87,7 @@ st.sidebar.number_input(
 """
 
 st.number_input(
-    label='Peak TFLOP/s/GPU',
+    label='Peak Theoretical Performance (TFLOP/s/GPU)',
     key='peak_tflops_per_gpu',
     value=312,
     min_value=0,
@@ -95,7 +97,7 @@ st.number_input(
 )
 
 st.number_input(
-    label='GPU Utilization',
+    label='GPU Utilization (%)',
     key='gpu_utilization',
     value=0.30,
     min_value=0.01,
@@ -109,7 +111,7 @@ st.number_input(
     key='gpu_count',
     value=300,
     min_value=0,
-    help='Usually between 5 and 20 GPUs per billion parameters',
+    help=r'Usually between 5 and 20 GPUs per billion parameters',
 )
 
 st.number_input(
@@ -131,7 +133,7 @@ st.number_input(
     label='Failure Recovery Time (hours)',
     key='failure_recovery_time',
     value=1.0,
-    help='Depends on failure recovery automation and checkpoint speed',
+    help=r'Depends on failure recovery automation and checkpoint speed',
 )
 
 st.number_input(
@@ -143,7 +145,7 @@ st.number_input(
 st.number_input(
     label='Training Data Size (Gigatokens)',
     key='training_data_size',
-    value=1000,
+    value=1000.0,
 )
 
 st.number_input(
@@ -170,6 +172,20 @@ def instance_count(gpu_count, gpus_per_instance):
     Computes the number of GPU instances necessary to fulfill the GPU count
     """
     return math.ceil(gpu_count / gpus_per_instance)
+
+@st.cache_data
+def checkpoint_size(model_size):
+   """
+   Estimates checkpoint size based on model size
+   """
+   return math.ceil(BLOOM_RATIO * model_size)
+
+@st.cache_data
+def training_data_size(training_data_size):
+   """
+   Estimates training data size in bytes
+   """
+   return math.ceil(training_data_size / TOKENS_PER_BYTE)
 
 @st.cache_data
 def real_tflops_per_gpu(peak_tflops_per_gpu, gpu_utilization):
@@ -243,9 +259,9 @@ def cumulative_checkpoint_size(number_of_checkpoints, checkpoint_size):
 
 inst_count = instance_count(st.session_state.gpu_count, st.session_state.gpus_per_instance)
 
-checkpoint_size = int(BLOOM_RATIO * st.session_state.model_size)
+cpoint_size = checkpoint_size(st.session_state.model_size)
 
-training_data_size = int(st.session_state.training_data_size / TOKENS_PER_BYTE)
+train_data_size = training_data_size(st.session_state.training_data_size)
 
 r_tflops_per_gpu = real_tflops_per_gpu(st.session_state.peak_tflops_per_gpu, st.session_state.gpu_utilization)
 
@@ -265,7 +281,7 @@ exp_gpu_time_recomputing_uncheckpointed_work = expected_gpu_time_recomputing_unc
 
 num_checkpoints = number_of_checkpoints(cluster_r_training_time, st.session_state.checkpoint_frequency)
 
-cum_checkpoint_size = cumulative_checkpoint_size(num_checkpoints, checkpoint_size)
+cum_cpoint_size = cumulative_checkpoint_size(num_checkpoints, cpoint_size)
 
 st.markdown(f"""
 <table>
@@ -282,7 +298,7 @@ st.markdown(f"""
        <b>Checkpoint Size (GB)</b>
     </td>
     <td>
-       <code>{checkpoint_size:,}</code>
+       <code>{cpoint_size:,}</code>
     </td>
   </tr>
   <tr>
@@ -290,7 +306,7 @@ st.markdown(f"""
        <b>Training Data Size (GB)</b>
     </td>
     <td>
-       <code>{training_data_size:,}</code>
+       <code>{train_data_size:,}</code>
     </td>
   </tr>
   <tr>
@@ -370,7 +386,7 @@ st.markdown(f"""
        <b>Cumulative Checkpoint Size (GB)</b>
     </td>
     <td>
-       <code>{cum_checkpoint_size:,}</code>
+       <code>{cum_cpoint_size:,}</code>
     </td>
   </tr>
 </table>
@@ -423,7 +439,7 @@ def total_training_cost(storage_cost, experiments_cost, downtime_cost, recomputa
     """
     return storage_cost + experiments_cost + downtime_cost + recomputation_cost + theoretical_training_cost
 
-tot_storage_cost = total_storage_cost(training_data_size, st.session_state.storage_cost, cluster_t_training_time, cum_checkpoint_size)
+tot_storage_cost = total_storage_cost(train_data_size, st.session_state.storage_cost, cluster_t_training_time, cum_cpoint_size)
 
 tot_experiments_cost = total_experiments_cost(st.session_state.gpu_hourly_price, st.session_state.experiments_budget)
 
