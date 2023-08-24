@@ -10,4 +10,5 @@ Find out how much compute power and storage you need to train your model.
 * [Transformer Math 101](https://blog.eleuther.ai/transformer-math/) by EleutherAI
 * [Transformer Inference Arithmetic](https://kipp.ly/transformer-inference-arithmetic/) by Kipply
 * [New Scaling Laws for Large Language Models](https://www.lesswrong.com/posts/midXmMb2Xg37F2Kgn/new-scaling-laws-for-large-language-models) by LessWrong
+* [How is LLaMa.cpp possible?](https://finbarr.ca/how-is-llama-cpp-possible/) by Finbarr Timbers
 * [AWS ML Infrastructure](https://aws.amazon.com/machine-learning/infrastructure/)
