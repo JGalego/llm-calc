@@ -614,7 +614,16 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 """
-### Want to learn more? 📚
+### Want to learn more?
+
+#### Articles 📚
+
+* (Brown *et al.*, 2020) [Language Models are Few-Shot Learners](https://arxiv.org/abs/2005.14165)
+* (Hoffmann *et al.*, 2022) [Training Compute-Optimal Large Language Models](https://arxiv.org/abs/2203.15556)
+* (Kaplan *et al.*, 2020) [Scaling Laws for Neural Language Models](https://arxiv.org/abs/2001.08361)
+* (Shoeybi *et al.*, 2019) [Megratron-LM: Training Multi-Billion Parameter Language Models Using Model Parallelism](https://arxiv.org/abs/1909.08053)
+
+#### Blogs ✍️
 
 * [The FLOPS Calculus of Language Model Training](https://medium.com/@dzmitrybahdanau/the-flops-calculus-of-language-model-training-3b19c1f025e4) by Dzmitry Bahdanau
 * [Transformer Math 101](https://blog.eleuther.ai/transformer-math/) by EleutherAI
