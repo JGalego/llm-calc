@@ -1,6 +1,6 @@
 # LLM Calculator 🧮
 
-Find out how much compute power and storage you need to train your model.
+Find out how much compute power and storage you need to train and host your model.
 
 <img src="https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExaXptNWh3bm54NDZwMDVidXNua2lidGxiZGl5c3VmeWllbmE5NGdueSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/3owzW5c1tPq63MPmWk/200.gif"/>
 
@@ -31,3 +31,9 @@ Find out how much compute power and storage you need to train your model.
 * [Speeding up the GPT - KV cache](https://www.dipkumar.dev/becoming-the-unbeatable/posts/gpt-kvcache/) by dipkumar
 * [Dissecting Batching Effects in GPT Inference](https://le.qun.ch/en/blog/2023/05/13/transformer-batching/) by Lequn Chen
 * [AWS ML Infrastructure](https://aws.amazon.com/machine-learning/infrastructure/)
+
+### Videos 🎥
+
+* [Let's build GPT: from scratch, in code, spelled out](https://www.youtube.com/watch?v=kCc8FmEb1nY) by Andrej Karpathy
+	- **Code:** [karpathy/nanoGPT](https://github.com/karpathy/nanoGPT) - The simplest, fastest repository for training/finetuning medium-sized GPTs
+	- Check out the [Transformer Sizing](https://github.com/karpathy/nanoGPT/blob/eba36e84649f3c6d840a93092cb779a260544d08/transformer_sizing.ipynb) and [Scaling Laws](https://github.com/karpathy/nanoGPT/blob/eba36e84649f3c6d840a93092cb779a260544d08/scaling_laws.ipynb) notebooks
