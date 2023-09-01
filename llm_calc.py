@@ -1,4 +1,3 @@
-#pylint: disable=line-too-long,redefined-outer-name,pointless-statement,pointless-string-statement
 r"""
   _      _      __  __    _____      _            _       _
  | |    | |    |  \/  |  / ____|    | |          | |     | |
@@ -18,12 +17,10 @@ st.title("LLM Calculator 🧮")
 st.subheader("How much compute and storage do I need?")
 
 """
-The purpose of the LLM Calculator is to size an LLM pre-training workload by predicting training duration, compute and storage costs.
-
-It should work with **any** accelerator, provided you have accurate information on hourly price and peak TFLOPs, and **any** Transformer-based model whose compute requirements are well-approximated by the [FLOPs equation](https://medium.com/@dzmitrybahdanau/the-flops-calculus-of-language-model-training-3b19c1f025e4).
+The purpose of this calculator is to size LLM pre-training workloads by predicting training duration, compute and storage costs. It works with **any** accelerator, provided you have accurate information on hourly price and peak performance, and **any** Transformer-based model whose compute requirements are well-approximated by the [FLOPs equation](https://medium.com/@dzmitrybahdanau/the-flops-calculus-of-language-model-training-3b19c1f025e4).
 """
 
-# Let's assume that the checkpoint size follows the BLOOM ratio
+# By default, we'll assume that the checkpoint size follows the BLOOM ratio
 # 2.3TB / 176B ~ 13GB per billion parameters
 # https://huggingface.co/bigscience/tr11-176B-logs
 # https://huggingface.co/blog/bloom-megatron-deepspeed
@@ -48,9 +45,9 @@ st.sidebar.selectbox(
 
 # How much does it cost to run a single GPU per hour?
 st.sidebar.number_input(
-    label='GPU hourly price',
-    key='gpu_hourly_price',
-    value=4.09 if st.session_state.currency == 'USD' else 3.77,  # p4d on-demand pricing for us-east-1
+    label='GPU Price (per hour)',
+    key='gpu_price_per_hour',
+    value=4.09 if st.session_state.currency == 'USD' else 3.77,  # p4d OD pricing for us-east-1
     step=0.01,
     format='%.2f',
 )
@@ -58,7 +55,7 @@ st.sidebar.number_input(
 # How much does it cost to store 1GB for 1 month?
 st.sidebar.number_input(
     label='Storage Cost (per GB-month)',
-    key='storage_cost',
+    key='storage_cost_per_GB_month',
     value=0.022 if st.session_state.currency == 'USD' else 0.020,  # S3 standard storage (50-500TB) pricing for us-east-1
     step=0.001,
     format='%.3f',
@@ -76,7 +73,7 @@ st.sidebar.number_input(
 # How much does the checkpoint size increase for each 1B parameters?
 st.sidebar.number_input(
     label='Checkpoint Size Ratio',
-    key='checkpoint_size_ratio',
+    key='chkpt_size_ratio',
     value=BLOOM_RATIO,
     step=0.1,
     format='%.1f',
@@ -86,14 +83,7 @@ with st.expander("Disclaimer ⚠️"):
     f"""
     This application is *highly* experimental! ⚡
 
-    As with all experiments, we had to make a few assumptions:
-
-    * Hardware failures impact only training, not experimentation
-    * Training datasets contain `{st.session_state.tokens_per_byte_ratio:.2f}` tokens per byte
-    * Checkpoint size is around `{st.session_state.checkpoint_size_ratio:.1f}GB` per billion parameters
-    * ... *and many, many more*!
-
-    These are only valid under *strict* conditions.
+    As with all experiments, we had to make a few assumptions which are only valid under *strict* conditions.
 
     If you don't trust the numbers, please consider running your own experiments.
 
@@ -108,7 +98,7 @@ with st.expander("Disclaimer ⚠️"):
 
 st.number_input(
     label='Peak Theoretical Performance (TFLOP/s/GPU)',
-    key='peak_tflops_per_gpu',
+    key='peak_perf_in_TFLOPs_per_gpu',
     value=312,  # peak float16 FLOP throughput of A100
     min_value=0,
     # A100: https://www.nvidia.com/en-us/data-center/a100/
@@ -143,7 +133,7 @@ st.number_input(
 
 st.number_input(
     label='Instance Failure Rate (per Instance-day)',
-    key='instance_failure_rate',
+    key='inst_fail_rate_per_inst_day',
     min_value=0.01,
     max_value=1.00,
     step=0.01,
@@ -151,33 +141,33 @@ st.number_input(
 
 st.number_input(
     label='Failure Recovery Time (hours)',
-    key='failure_recovery_time',
+    key='fail_rcv_t_in_h',
     value=1.0,
     help=r'This value varies depending on the checkpoint speed and failure recovery automation',
 )
 
 st.number_input(
     label='Model Size (Billion parameters)',
-    key='model_size',
+    key='model_size_in_B',
     value=40,
 )
 
 st.number_input(
-    label='Training Data Size (Gigatokens)',
-    key='training_data_size',
+    label='Training Data Size (Gtokens)',
+    key='data_size_in_Gtokens',
     value=1000.0,
 )
 
 st.number_input(
     label='Experiments Budget (GPU-hours)',
-    key='experiments_budget',
+    key='expt_budget_in_gpu_hours',
     value=0.0,
     help=r'This is usually between 1-10% of the total budget'
 )
 
 st.number_input(
     label='Checkpoint Frequency (per day)',
-    key='checkpoint_frequency',
+    key='chkpt_freq_per_day',
     value=24,    # hourly
     min_value=1, # daily
 )
@@ -206,7 +196,7 @@ with st.expander("Learn more about the math 🔢"):
 
     $$~r_\texttt{checkpoint} \times N$$
 
-    and translate the **Training Dataset Size** ($D$) from `GTokens` to `GB`
+    and translate the **Training Dataset Size** ($D$) from `Gtokens` to `GB`
 
     $$~D / r_{\texttt{tokens} \rightarrow \texttt{byte}}$$
 
@@ -274,122 +264,193 @@ with st.expander("Learn more about the math 🔢"):
     * (Hoffmann *et al.*, 2022) [Training Compute-Optimal Large Language Models](https://arxiv.org/abs/2203.15556)
     """
 
+# Instance Count
+
 @st.cache_data
 def instance_count(gpu_count, gpus_per_instance):
     """
-    Computes the number of GPU instances necessary to fulfill the GPU count
+    Returns the number of GPU instances necessary to fulfill a given GPU count
     """
     return math.ceil(gpu_count / gpus_per_instance)
 
-@st.cache_data
-def checkpoint_size(model_size, checkpoint_size_ratio):
-    """
-    Estimates checkpoint size based on model size
-    """
-    return checkpoint_size_ratio * model_size
+inst_count = instance_count(
+    st.session_state.gpu_count,
+    st.session_state.gpus_per_instance,
+)
+
+# Checkpoint Size (GB)
 
 @st.cache_data
-def training_data_size(training_data_size, tokens_per_byte_ratio):
+def checkpoint_size(model_size_in_B, chkpt_size_ratio):
     """
-    Estimates training data size in bytes
+    Estimates checkpoint size in GB based on the model size (# parameters)
     """
-    return training_data_size / tokens_per_byte_ratio
+    return chkpt_size_ratio * model_size_in_B
+
+chkpt_size_in_GB = checkpoint_size(
+    st.session_state.model_size_in_B,
+    st.session_state.chkpt_size_ratio,
+)
+
+# Dataset Size (GB)
 
 @st.cache_data
-def actual_tflops_per_gpu(peak_tflops_per_gpu, gpu_utilization):
+def data_size(data_size_in_Gtokens, tokens_per_byte_ratio):
     """
-    Computes actual TFLOPs per GPU based on peak performance and GPU utilization
+    Estimates training data size in GB from the number of tokens
     """
-    return peak_tflops_per_gpu * gpu_utilization / 100
+    return data_size_in_Gtokens / tokens_per_byte_ratio
+
+data_size_in_GB = data_size(
+    st.session_state.data_size_in_Gtokens,
+    st.session_state.tokens_per_byte_ratio,
+)
+
+# Actual Performance (TFLOPs/GPU)
 
 @st.cache_data
-def training_tflops_requirements(model_size, training_data_size):
+def actual_performance(peak_perf_in_TFLOPs_per_gpu, gpu_utilization):
     """
-    Computes training TFLOPs requirements based on the size of the model and training data
+    Returns actual TFLOPs per GPU based on peak performance and GPU utilization
     """
-    return 6 * model_size * 1e9 * training_data_size * 1e9 / 1e12
+    return peak_perf_in_TFLOPs_per_gpu * gpu_utilization / 100
+
+actual_perf_in_TFLOPs_per_gpu = actual_performance(
+    st.session_state.peak_perf_in_TFLOPs_per_gpu,
+    st.session_state.gpu_utilization
+)
+
+# Training Compute Requirements (TFLOPs)
 
 @st.cache_data
-def theoretical_training_time(training_tflops_requirements, actual_tflops_per_gpu):
+def train_compute_requirements(model_size_in_B, data_size_in_Gtokens):
     """
-    Computes theoretical training time in GPU-hours
+    Returns training TFLOPs requirements based on the size of the model and training data
     """
-    return training_tflops_requirements / actual_tflops_per_gpu / 3600
+    return 6 * model_size_in_B * 1e9 * data_size_in_Gtokens * 1e9 / 1e12
+
+train_comp_reqs_in_TFLOPs = train_compute_requirements(
+    st.session_state.model_size_in_B,
+    st.session_state.data_size_in_Gtokens,
+)
+
+# Theoretical Training Time (GPU-hours)
 
 @st.cache_data
-def cluster_theoretical_training_time(theoretical_training_time, gpu_count):
+def theoretical_training_time(train_comp_reqs_in_TFLOPs, actual_perf_in_TFLOPs_per_gpu):
     """
-    Computes cluster theoretical training time in days
+    Returns the *theoretical* training time in GPU-hours
     """
-    return theoretical_training_time / gpu_count / 24
+    return train_comp_reqs_in_TFLOPs / actual_perf_in_TFLOPs_per_gpu / 3600
+
+t_train_time_in_gpu_hours = theoretical_training_time(
+    train_comp_reqs_in_TFLOPs,
+    actual_perf_in_TFLOPs_per_gpu
+)
+
+# Cluster Theoretical Training Time (days)
 
 @st.cache_data
-def cluster_actual_training_time(cluster_theoretical_training_time, instance_count, instance_failure_rate, failure_recovery_time, checkpoint_frequency):
+def cluster_theoretical_training_time(t_train_time_in_gpu_hours, gpu_count):
     """
-    Computes cluster actual training time in days
+    Returns the cluster *theoretical* training time in days
     """
-    return cluster_theoretical_training_time / (1 - (instance_failure_rate / 100) * instance_count * (failure_recovery_time/24 + 1/(2 * checkpoint_frequency)))
+    return t_train_time_in_gpu_hours / gpu_count / 24
+
+cluster_t_train_time_in_days = cluster_theoretical_training_time(
+    t_train_time_in_gpu_hours,
+    st.session_state.gpu_count,
+)
+
+# Cluster Actual Training Time (days)
 
 @st.cache_data
-def expected_failures(instance_failure_rate, cluster_actual_training_time, instance_count):
+def cluster_actual_training_time(cluster_t_train_time_in_days, inst_count, inst_fail_rate_per_inst_day, fail_rcv_t_in_h, chkpt_freq_per_day):
     """
-    Computes the number of expected failures
+    Returns the cluster *actual* training time in days
     """
-    return (instance_failure_rate / 100.) * cluster_actual_training_time * instance_count
+    return cluster_t_train_time_in_days / (1 - (inst_fail_rate_per_inst_day / 100) * inst_count * (fail_rcv_t_in_h/24 + 1/(2 * chkpt_freq_per_day)))
+
+cluster_a_train_time_in_days = cluster_actual_training_time(
+    cluster_t_train_time_in_days,
+    inst_count,
+    st.session_state.inst_fail_rate_per_inst_day,
+    st.session_state.fail_rcv_t_in_h,
+    st.session_state.chkpt_freq_per_day,
+)
+
+# Expected Failures
 
 @st.cache_data
-def expected_gpu_time_in_failed_state(expected_failures, gpu_count, failure_recovery_time):
+def expected_failures(inst_fail_rate_per_inst_day, cluster_actual_training_time, inst_count):
     """
-    Computes expected GPU-hours spent in failed state
+    Returns the expected number of failures during the training cycle
     """
-    return expected_failures * gpu_count * failure_recovery_time
+    return (inst_fail_rate_per_inst_day / 100) * cluster_actual_training_time * inst_count
+
+exp_fail = expected_failures(
+    st.session_state.inst_fail_rate_per_inst_day,
+    cluster_a_train_time_in_days,
+    inst_count,
+)
+
+# Expected GPU Time in Failed State (GPU-hours)
 
 @st.cache_data
-def expected_gpu_time_recomputing_uncheckpointed_work(checkpoint_frequency, expected_failures, gpu_count):
+def expected_gpu_time_in_failed_state(exp_fail, gpu_count, fail_rcv_t_in_h):
     """
-    Computes expected GPU-hours to recover uncheckpointed work
+    Returns the expected number of GPU-hours spent in a failed state
     """
-    return 24 / checkpoint_frequency / 2 * expected_failures * gpu_count
+    return exp_fail * gpu_count * fail_rcv_t_in_h
+
+exp_gpu_time_fail_in_gpu_hours = expected_gpu_time_in_failed_state(
+    exp_fail,
+    st.session_state.gpu_count,
+    st.session_state.fail_rcv_t_in_h,
+)
+
+# Expected GPU Time recomputing uncheckpointed work (GPU-hours)
 
 @st.cache_data
-def number_of_checkpoints(cluster_actual_training_time, checkpoint_frequency):
+def expected_gpu_time_recomputing(chkpt_freq_per_day, exp_fail, gpu_count):
     """
-    Computes the number of checkpoints based on cluster actual training time
+    Returns the expected number of GPU-hours to recover uncheckpointed work
     """
-    return math.ceil(cluster_actual_training_time * checkpoint_frequency)
+    return 24 / chkpt_freq_per_day / 2 * exp_fail * gpu_count
+
+exp_gpu_time_recomp_in_gpu_hours = expected_gpu_time_recomputing(
+    st.session_state.chkpt_freq_per_day,
+    exp_fail,
+    st.session_state.gpu_count,
+)
+
+# Number of Checkpoints
 
 @st.cache_data
-def cumulative_checkpoint_size(number_of_checkpoints, checkpoint_size):
+def checkpoint_count(cluster_a_train_time_in_days, chkpt_freq_per_day):
     """
-    Computes the cumulative checkpoint storage size in GB
+    Returns the number of checkpoints based on cluster actual training time
     """
-    return number_of_checkpoints * checkpoint_size
+    return math.ceil(cluster_a_train_time_in_days * chkpt_freq_per_day)
 
-inst_count = instance_count(st.session_state.gpu_count, st.session_state.gpus_per_instance)
+chkpt_count = checkpoint_count(
+    cluster_a_train_time_in_days,
+    st.session_state.chkpt_freq_per_day,
+)
 
-cpoint_size = checkpoint_size(st.session_state.model_size, st.session_state.checkpoint_size_ratio)
+# Cumulative Checkpoint Size (GB)
 
-train_data_size = training_data_size(st.session_state.training_data_size, st.session_state.tokens_per_byte_ratio)
+@st.cache_data
+def cumulative_checkpoint_size(chkpt_count, chkpt_size_in_GB):
+    """
+    Returns the cumulative checkpoint storage size in GB
+    """
+    return chkpt_count * chkpt_size_in_GB
 
-a_tflops_per_gpu = actual_tflops_per_gpu(st.session_state.peak_tflops_per_gpu, st.session_state.gpu_utilization)
-
-training_tflops_reqs = training_tflops_requirements(st.session_state.model_size, st.session_state.training_data_size)
-
-t_training_time = theoretical_training_time(training_tflops_reqs, a_tflops_per_gpu)
-
-cluster_t_training_time = cluster_theoretical_training_time(t_training_time, st.session_state.gpu_count)
-
-cluster_a_training_time = cluster_actual_training_time(cluster_t_training_time, inst_count, st.session_state.instance_failure_rate, st.session_state.failure_recovery_time, st.session_state.checkpoint_frequency)
-
-exp_failures = expected_failures(st.session_state.instance_failure_rate, cluster_a_training_time, inst_count)
-
-exp_gpu_time_in_failed_state = expected_gpu_time_in_failed_state(exp_failures, st.session_state.gpu_count, st.session_state.failure_recovery_time)
-
-exp_gpu_time_recomputing_uncheckpointed_work = expected_gpu_time_recomputing_uncheckpointed_work(st.session_state.checkpoint_frequency, exp_failures, st.session_state.gpu_count)
-
-num_checkpoints = number_of_checkpoints(cluster_a_training_time, st.session_state.checkpoint_frequency)
-
-cum_cpoint_size = cumulative_checkpoint_size(num_checkpoints, cpoint_size)
+cum_chkpt_size_in_GB = cumulative_checkpoint_size(
+    chkpt_count,
+    chkpt_size_in_GB,
+)
 
 st.markdown(f"""
 <table>
@@ -403,58 +464,58 @@ st.markdown(f"""
   </tr>
   <tr>
     <td>
-       <b>Checkpoint Size (GB)</b>
+       <b>Checkpoint Size</b>
     </td>
     <td>
-       <code>{cpoint_size:,.1f}</code>
-    </td>
-  </tr>
-  <tr>
-    <td>
-       <b>Training Data Size (GB)</b>
-    </td>
-    <td>
-       <code>{train_data_size:,.1f}</code>
+       <code>{chkpt_size_in_GB:,.1f} GB</code>
     </td>
   </tr>
   <tr>
     <td>
-       <b>Actual TFLOPs/s/GPU</b>
+       <b>Dataset Size</b>
     </td>
     <td>
-       <code>{a_tflops_per_gpu:,}</code>
-    </td>
-  </tr>
-  <tr>
-    <td>
-       <b>Training TFLOPs Requirements</b>
-    </td>
-    <td>
-       <code>{training_tflops_reqs:.2E}</code>
+       <code>{data_size_in_GB:,.1f} GB</code>
     </td>
   </tr>
   <tr>
     <td>
-       <b>Theoretical Training Time (GPU-hours)</b>
+       <b>Actual Performance</b>
     </td>
     <td>
-       <code>{t_training_time:,.1f}</code>
-    </td>
-  </tr>
-  <tr>
-    <td>
-       <b>Cluster Theoretical Training Time (days)</b>
-    </td>
-    <td>
-       <code>{cluster_t_training_time:,.1f}</code>
+       <code>{actual_perf_in_TFLOPs_per_gpu:,} TFLOPs/s/GPU</code>
     </td>
   </tr>
   <tr>
     <td>
-       <b>Cluster Actual Training Time (days)</b>
+       <b>Training Compute Requirements</b>
     </td>
     <td>
-       <code>{cluster_a_training_time:,.1f}</code>
+       <code>{train_comp_reqs_in_TFLOPs:.2E} TFLOPs</code>
+    </td>
+  </tr>
+  <tr>
+    <td>
+       <b>Theoretical Training Time</b>
+    </td>
+    <td>
+       <code>{t_train_time_in_gpu_hours:,.1f} GPU-hours</code>
+    </td>
+  </tr>
+  <tr>
+    <td>
+       <b>Cluster Theoretical Training Time</b>
+    </td>
+    <td>
+       <code>{cluster_t_train_time_in_days:,.1f} days</code>
+    </td>
+  </tr>
+  <tr>
+    <td>
+       <b>Cluster Actual Training Time</b>
+    </td>
+    <td>
+       <code>{cluster_a_train_time_in_days:,.1f} days</code>
     </td>
   </tr>
   <tr>
@@ -462,23 +523,23 @@ st.markdown(f"""
        <b>Expected Failures</b>
     </td>
     <td>
-       <code>{exp_failures:,.1f}</code>
+       <code>{exp_fail:,.0f}</code>
     </td>
   </tr>
   <tr>
     <td>
-       <b>Expected GPU Time in Failed State (GPU-hours)</b>
+       <b>Expected GPU Time in Failed State</b>
     </td>
     <td>
-       <code>{exp_gpu_time_in_failed_state:,.0f}</code>
+       <code>{exp_gpu_time_fail_in_gpu_hours:,.0f} GPU-hours</code>
     </td>
   </tr>
   <tr>
     <td>
-       <b>Expected GPU Time Recomputing Uncheckpointed Work (GPU-hours)</b>
+       <b>Expected GPU Time Recomputing</b>
     </td>
     <td>
-       <code>{exp_gpu_time_recomputing_uncheckpointed_work:,.0f}</code>
+       <code>{exp_gpu_time_recomp_in_gpu_hours:,.0f} GPU-hours</code>
     </td>
   </tr>
   <tr>
@@ -486,15 +547,15 @@ st.markdown(f"""
        <b># Checkpoints</b>
     </td>
     <td>
-       <code>{num_checkpoints:,}</code>
+       <code>{chkpt_count:,}</code>
     </td>
   </tr>
   <tr>
     <td>
-       <b>Cumulative Checkpoint Size (GB)</b>
+       <b>Cumulative Checkpoint Size</b>
     </td>
     <td>
-       <code>{cum_cpoint_size:,.1f}</code>
+       <code>{cum_chkpt_size_in_GB:,.1f} GB</code>
     </td>
   </tr>
 </table>
@@ -505,59 +566,99 @@ st.markdown(f"""
 ### Costs 💰
 """
 
-@st.cache_data
-def total_storage_cost(training_data_size, storage_cost, cluster_theoretical_training_time, cumulative_checkpoint_size):
-    """
-    Computes the total storage cost
-    """
-    return training_data_size * storage_cost * (cluster_theoretical_training_time / 30.25) + cumulative_checkpoint_size * storage_cost * (cluster_theoretical_training_time / 30.25) / 2
+# Total Storage Cost
 
 @st.cache_data
-def total_experiments_cost(gpu_hourly_price, experiments_budget):
+def storage_cost(storage_cost_per_GB_month, data_size_in_GB, cum_chkpt_size_in_GB, cluster_t_train_time_in_days):
     """
-    Computes the total cost of experimentation
+    Returns the total storage cost
     """
-    return gpu_hourly_price * experiments_budget
+    return storage_cost_per_GB_month * (data_size_in_GB + cum_chkpt_size_in_GB/2) * (cluster_t_train_time_in_days / 30.25)
+
+sto_cost = storage_cost(
+    st.session_state.storage_cost_per_GB_month,
+    data_size_in_GB,
+    cum_chkpt_size_in_GB,
+    cluster_t_train_time_in_days,
+)
+
+# Experiments Cost
 
 @st.cache_data
-def failures_downtime_cost(gpu_hourly_price, expected_gpu_time_in_failed_state):
+def experiments_cost(gpu_price_per_hour, expt_budget_in_gpu_hours):
     """
-    Computes the cost associated with downtime due to failures
+    Returns the total cost of experimentation
     """
-    return gpu_hourly_price * expected_gpu_time_in_failed_state
+    return gpu_price_per_hour * expt_budget_in_gpu_hours
+
+expt_cost = experiments_cost(
+    st.session_state.gpu_price_per_hour,
+    st.session_state.expt_budget_in_gpu_hours,
+)
+
+# Downtime Cost
 
 @st.cache_data
-def failures_recomputation_cost(gpu_hourly_price, expected_gpu_time_recomputing_uncheckpointed_work):
+def failures_downtime_cost(gpu_price_per_hour, exp_gpu_time_fail_in_gpu_hours):
     """
-    Computes the cost associated with recomputation due to failures
+    Returns the cost associated with downtime due to failures
     """
-    return gpu_hourly_price * expected_gpu_time_recomputing_uncheckpointed_work
+    return gpu_price_per_hour * exp_gpu_time_fail_in_gpu_hours
+
+
+fail_downtime_cost = failures_downtime_cost(
+    st.session_state.gpu_price_per_hour,
+    exp_gpu_time_fail_in_gpu_hours,
+)
+
+# Recomputation Cost
 
 @st.cache_data
-def theoretical_training_cost(gpu_hourly_price, theoretical_training_time):
+def failures_recomputation_cost(gpu_price_per_hour, exp_gpu_time_recomp_in_gpu_hours):
     """
-    Computes the theoretical training cost
+    Returns the cost associated with recomputation due to failures
     """
-    return gpu_hourly_price * theoretical_training_time
+    return gpu_price_per_hour * exp_gpu_time_recomp_in_gpu_hours
+
+fail_recomp_cost = failures_downtime_cost(
+    st.session_state.gpu_price_per_hour,
+    exp_gpu_time_recomp_in_gpu_hours,
+)
+
+# Theoretical Training Cost
+
+@st.cache_data
+def theoretical_training_cost(gpu_price_per_hour, t_train_time_in_gpu_hours):
+    """
+    Returns the theoretical training cost
+    """
+    return gpu_price_per_hour * t_train_time_in_gpu_hours
+
+t_train_cost = theoretical_training_cost(
+    st.session_state.gpu_price_per_hour,
+    t_train_time_in_gpu_hours,
+)
+
+# Total Training Cost
 
 @st.cache_data
 def total_training_cost(storage_cost, experiments_cost, downtime_cost, recomputation_cost, theoretical_training_cost):
     """
-    Computes the total training cost
+    Returns the total training cost
     """
     return storage_cost + experiments_cost + downtime_cost + recomputation_cost + theoretical_training_cost
 
-tot_storage_cost = total_storage_cost(train_data_size, st.session_state.storage_cost, cluster_t_training_time, cum_cpoint_size)
+total_train_cost = total_training_cost(
+    sto_cost,
+    expt_cost,
+    fail_downtime_cost,
+    fail_recomp_cost,
+    t_train_cost,
+)
 
-tot_experiments_cost = total_experiments_cost(st.session_state.gpu_hourly_price, st.session_state.experiments_budget)
-
-fail_downtime_cost = failures_downtime_cost(st.session_state.gpu_hourly_price, exp_gpu_time_in_failed_state)
-
-fail_recomputation_cost = failures_downtime_cost(st.session_state.gpu_hourly_price, exp_gpu_time_recomputing_uncheckpointed_work)
-
-t_training_cost = theoretical_training_cost(st.session_state.gpu_hourly_price, t_training_time)
-
-tot_training_cost = total_training_cost(tot_storage_cost, tot_experiments_cost, fail_downtime_cost, fail_recomputation_cost, t_training_cost)
+###########
+# Outputs #
+###########
 
 st.markdown(f"""
 <table>
@@ -566,7 +667,9 @@ st.markdown(f"""
        <b>Storage</b>
     </td>
     <td>
-       <code>{tot_storage_cost:,.2f}{currencies[st.session_state.currency]}</code>
+       <div style='float: right; text-align: right'>
+       <code>{sto_cost:,.2f}{currencies[st.session_state.currency]}</code>
+       </div>
     </td>
   </tr>
   <tr>
@@ -574,7 +677,9 @@ st.markdown(f"""
        <b>Experiments</b>
     </td>
     <td>
-       <code>{tot_experiments_cost:,.2f}{currencies[st.session_state.currency]}</code>
+       <div style='float: right; text-align: right'>
+       <code>{expt_cost:,.2f}{currencies[st.session_state.currency]}</code>
+       </div>
     </td>
   </tr>
   <tr>
@@ -582,7 +687,9 @@ st.markdown(f"""
        <b>Failures (Downtime)</b>
     </td>
     <td>
+       <div style='float: right; text-align: right'>
        <code>{fail_downtime_cost:,.2f}{currencies[st.session_state.currency]}</code>
+       </div>
     </td>
   </tr>
   <tr>
@@ -590,7 +697,9 @@ st.markdown(f"""
        <b>Failures (Recomputation)</b>
     </td>
     <td>
-       <code>{fail_recomputation_cost:,.2f}{currencies[st.session_state.currency]}</code>
+       <div style='float: right; text-align: right'>
+       <code>{fail_recomp_cost:,.2f}{currencies[st.session_state.currency]}</code>
+       </div>
     </td>
   </tr>
   <tr>
@@ -598,7 +707,9 @@ st.markdown(f"""
        <b>Theoretical Training Cost</b>
     </td>
     <td>
-       <code>{t_training_cost:,.2f}{currencies[st.session_state.currency]}</code>
+       <div style='float: right; text-align: right'>
+       <code>{t_train_cost:,.2f}{currencies[st.session_state.currency]}</code>
+       </div>
     </td>
   </tr>
   <tr>
@@ -606,7 +717,9 @@ st.markdown(f"""
        <b style="color:red">Total Training Cost</b>
     </td>
     <td>
-       <code>{tot_training_cost:,.2f}{currencies[st.session_state.currency]}</code>
+       <div style='float: right; text-align: right'>
+       <code>{total_train_cost:,.2f}{currencies[st.session_state.currency]}</code>
+       </div>
     </td>
   </tr>
 </table>
