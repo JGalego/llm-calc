@@ -33,10 +33,14 @@ Find out how much compute power and storage you need to train and host your mode
 * [Accelerated Inference for Large Transformer Models Using NVIDIA Triton Inference Server](https://developer.nvidia.com/blog/accelerated-inference-for-large-transformer-models-using-nvidia-fastertransformer-and-nvidia-triton-inference-server/) by Nvidia
 * [AWS ML Infrastructure](https://aws.amazon.com/machine-learning/infrastructure/)
 
+### Code 👨‍💻
+
+* [karpathy/nanoGPT](https://github.com/karpathy/nanoGPT) - The simplest, fastest repository for training/finetuning medium-sized GPTs
+	- Check out the [Transformer Sizing](https://github.com/karpathy/nanoGPT/blob/eba36e84649f3c6d840a93092cb779a260544d08/transformer_sizing.ipynb) and [Scaling Laws](https://github.com/karpathy/nanoGPT/blob/eba36e84649f3c6d840a93092cb779a260544d08/scaling_laws.ipynb) notebooks
+* [huggingface/llm_training_handbook](https://github.com/huggingface/llm_training_handbook) - open collection of methodologies to help with successful LLM training
+
 ### Videos 🎥
 
 * [Let's build GPT: from scratch, in code, spelled out](https://www.youtube.com/watch?v=kCc8FmEb1nY) by Andrej Karpathy
-	- **Code:** [karpathy/nanoGPT](https://github.com/karpathy/nanoGPT) - The simplest, fastest repository for training/finetuning medium-sized GPTs
-	- Check out the [Transformer Sizing](https://github.com/karpathy/nanoGPT/blob/eba36e84649f3c6d840a93092cb779a260544d08/transformer_sizing.ipynb) and [Scaling Laws](https://github.com/karpathy/nanoGPT/blob/eba36e84649f3c6d840a93092cb779a260544d08/scaling_laws.ipynb) notebooks
 * [How a Transformer works at inference vs training time](https://www.youtube.com/watch?v=IGu7ivuy1Ag) by Niels Rogge
 * [The KV Cache: Memory Usage in Transformers](https://www.youtube.com/watch?v=80bIUggRJf4) by Efficient NLP
