@@ -9,9 +9,11 @@ Find out how much compute power and storage you need to train and host your mode
 ### Articles 📚
 
 * (Brown *et al.*, 2020) [Language Models are Few-Shot Learners](https://arxiv.org/abs/2005.14165)
+* (Chowdhery *et al.*, 2022) [PaLM: Scaling Language Modeling with Pathways](https://arxiv.org/abs/2204.02311)
 * (Hoffmann *et al.*, 2022) [Training Compute-Optimal Large Language Models](https://arxiv.org/abs/2203.15556)
 * (Ivanov *et al.*, 2020) [Data Movement is All You Need: A Case Study for Optimizing Transformers](https://arxiv.org/abs/2007.00072)
 * (Kaplan *et al.*, 2020) [Scaling Laws for Neural Language Models](https://arxiv.org/abs/2001.08361)
+* (Korthikanti *et al.*, 2022) [Reducing Activation Recomputation in Large Transformer Models](https://arxiv.org/abs/2205.05198)
 * (Pope *et al.*, 2022) [Efficiently Scaling Transformer Inference](https://arxiv.org/abs/2211.05102)
 * (Sheng *et al.*, 2023) [FlexGen: High-Throughput Generative Inference of Large Language Models with a Single GPU](https://arxiv.org/abs/2303.06865)
 * (Shoeybi *et al.*, 2019) [Megratron-LM: Training Multi-Billion Parameter Language Models Using Model Parallelism](https://arxiv.org/abs/1909.08053)

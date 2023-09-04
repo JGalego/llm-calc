@@ -6,7 +6,7 @@ r"""
  | |____| |____| |  | | | |___| (_| | | (__| |_| | | (_| | || (_) | |
  |______|______|_|  |_|  \_____\__,_|_|\___|\__,_|_|\__,_|\__\___/|_|
 
-Find out how much compute power and storage you need to train your model!
+Learn how to size LLM workloads - find out how much compute power and storage you need to train your model!
 """
 
 import math
@@ -26,7 +26,7 @@ The purpose of this calculator is to size LLM pre-training workloads by predicti
 # https://huggingface.co/blog/bloom-megatron-deepspeed
 BLOOM_RATIO = 2.3e3/176
 
-# and that the training data contains approximately
+# and that the training dataset contains approximately
 # 350B / 1.6TB ~ 0.2 tokens-per-byte
 # https://accubits.com/large-language-models-leaderboard/bloom/
 TOKENS_PER_BYTE = 350e9/1.6e12
@@ -43,7 +43,7 @@ st.sidebar.selectbox(
     key='currency'
 )
 
-# How much does it cost to run a single GPU per hour?
+# How much does it cost per hour to run a single GPU?
 st.sidebar.number_input(
     label='GPU Price (per hour)',
     key='gpu_price_per_hour',
@@ -61,7 +61,7 @@ st.sidebar.number_input(
     format='%.3f',
 )
 
-# In our dataset, how many tokens do we have for each byte?
+# How many tokens do we have for each byte in our dataset?
 st.sidebar.number_input(
     label='Tokens-per-Byte Ratio',
     key='tokens_per_byte_ratio',
@@ -81,11 +81,11 @@ st.sidebar.number_input(
 
 with st.expander("Disclaimer ⚠️"):
     f"""
-    This application is *highly* experimental! ⚡
+    Please beware, this application is *highly* experimental! ⚡
 
-    As with all experiments, we had to make a few assumptions which are only valid under *strict* conditions.
+    As with all experiments, we had to make a few assumptions that are only valid under *strict* conditions.
 
-    If you don't trust the numbers, please consider running your own experiments.
+    If you don't trust the numbers, feel free to run your own experiments.
 
     Quoting from [Isaiah Berlin](https://plato.stanford.edu/entries/berlin/):
 
@@ -98,7 +98,7 @@ with st.expander("Disclaimer ⚠️"):
 
 st.number_input(
     label='Peak Theoretical Performance (TFLOP/s/GPU)',
-    key='peak_perf_in_TFLOPs_per_gpu',
+    key='peak_perf_in_TFLOP_s_per_gpu',
     value=312,  # peak float16 FLOP throughput of A100
     min_value=0,
     # A100: https://www.nvidia.com/en-us/data-center/a100/
@@ -121,7 +121,7 @@ st.number_input(
     key='gpu_count',
     value=300,
     min_value=0,
-    help=r'Usually between 5 and 20 GPUs per billion parameters',
+    help=r'Usually between 5 and 20 GPUs per Billion parameters',
 )
 
 st.number_input(
@@ -147,7 +147,7 @@ st.number_input(
 )
 
 st.number_input(
-    label='Model Size (Billion parameters)',
+    label='Model Size (# Parameters/Billion)',
     key='model_size_in_B',
     value=40,
 )
@@ -178,91 +178,151 @@ st.number_input(
 
 with st.expander("Learn more about the math 🔢"):
     r"""
-    #### GPU Instance Count
+    #### Units & Conventions
 
-    Assuming that all instances have the same number of GPUs ($n_\texttt{GPU}$), we can easily calculate the total number of GPU instances required
+    When discussing compute requirements, we follow the convention of using [FLOP for quantity and FLOP/s for performance](https://blog.heim.xyz/flop-for-quantity-flop-s-for-performance/):
 
-    $$~N_\texttt{instances} = \lceil N_\texttt{GPU} / n_\texttt{GPU} \rceil$$
+    * **Quantity:** FLOP is short for *floating-point operation*. FLOPs (lowercase *s*, no apostrophe) is just the plural of FLOP. If we are consistent, the [whole case against FLOPs](https://www.lesswrong.com/posts/XiKidK9kNvJHX9Yte/avoid-the-abbreviation-flops-use-flop-or-flop-s-instead) is nonsensical. Just to be on the safe side though and to avoid confusion, we will only use FLOPs in written text.
 
-    The `ceil`ing function ensures that the formula returns the right number of instances even when the total number of GPUs ($N_\texttt{GPU}$) is **not** a factor of the number of GPUs *per instance*.
+    * **Performance:** FLOP/s (*preferred*) and FLOPS can be used interchangeably.
+    
+    Some papers will report compute values in PetaFLOP/s-days, often abbreviated as PF-days, see e.g. Kaplan *et al.* (2020S). Simple dimensional analysis tells us that $[\text{Performance}] \times [\text{Duration}]$ is just $[\text{Quantity}]$.
+
+    #### GPUs vs GPU Instances
+
+    Training large models requires massive amounts of compute.
+    
+    At present, GPUs are the most cost-effective hardware accelerators for the job.
+
+    However, choosing the right one can be quite challenging cf. [Selecting Servers and GPUs](https://d2l.ai/chapter_appendix-tools-for-deep-learning/selecting-servers-gpus.html) from d2l.ai.
+
+    The golden rule is to [choose the right **GPU instance**, not just the right GPU](https://towardsdatascience.com/choosing-the-right-gpu-for-deep-learning-on-aws-d69c157d8c86).
+
+    Now, assuming that all instances have the same number of GPUs ($n_\texttt{GPU}$), we can easily calculate the number of GPU instances ($N_\texttt{inst}$) we'll need based on the total number of GPUs ($N_\texttt{GPU}$)
+
+    $$~N_\texttt{inst} = \lceil N_\texttt{GPU} / n_\texttt{GPU} \rceil$$
+
+    The `ceil`ing function ensures that the formula returns the right number of instances even when $n_\texttt{GPU}$ does **not** factor $N_\texttt{GPU}$.
 
     #### Estimating Storage
 
-    Checkpoints are intermediate dumps of a model's entire internal state (weights, learning rate, &c.).
+    During training, we'll have to store datasets as well as multiple snapshots of our model.
 
-    They can be used to resume training or to load a model that has already been trained.
+    These snapshots, commonly known as **checkpoints**, represent the model's *entire internal state* and can be used to resume training or to load a model that has already been trained.
 
-    Based on reported values for similar models and datasets, we can estimate **Checkpoint Size** given the size of the model ($N$)
+    *Ceteris paribus*, the ratio $r_\texttt{chkpt}$ between the size of a single checkpoint ($s_\texttt{chkpt}$) and the number of parameters $N$ will be the same for models of similar size.
 
-    $$~r_\texttt{checkpoint} \times N$$
+    *Ceteris paribus*, the ratio between checkpoint size and model size ($N$) is fixed.
 
-    and translate the **Training Dataset Size** ($D$) from `Gtokens` to `GB`
+    We can use this fact to estimate the size of a single checkpoint (in `GB`) based on the reported values for models of a similar size:
 
-    $$~D / r_{\texttt{tokens} \rightarrow \texttt{byte}}$$
+    $$~s_\texttt{chkpt} = r_\texttt{chkpt} \cdot N$$
 
-    As a default, we use the **Checkpoint Size Ratio** ($r_\texttt{checkpoint}$) for the [BLOOM-176B](https://huggingface.co/blog/bloom-megatron-deepspeed) model
+    As a default, we use the checkpoint size ratio for the [BLOOM-176B](https://huggingface.co/blog/bloom-megatron-deepspeed) model
 
-    `2.3TB (checkpoint size) / 176B (# parameters) ~ 13.1 GB/Billion parameters`
+    $$~r_\texttt{chkpt}(\text{BLOOM-176B}) = \underbrace{2.3\text{TB}}_\text{Checkpoint Size} / \underbrace{176\text{B}}_\text{Model Size} \approx 13.1 \text{GB/Billion parameters}$$
 
-    and **Tokens per Byte Ratio** ($r_{\texttt{tokens} \rightarrow \texttt{byte}}$) for [The BigScience ROOTS Corpus](https://arxiv.org/abs/2303.03915) dataset
+    Equivalently, we can convert our dataset size $D$ (usually reported in `Gtokens`) to `GB` based on available information for similar datasets:
 
-    `350B (# tokens) / 1.6TB (dataset size) ~ 0.22 Tokens/Byte`
+    $$~D_\ast = r^{-1}_{\texttt{t2b}} \cdot D$$
+
+    The tokens-per-byte ratio $r_{\texttt{t2b}}$ for [The BigScience ROOTS Corpus](https://arxiv.org/abs/2303.03915) dataset is approximately
+
+    $$~r_\texttt{t2b}(\text{The BigScience ROOTS Corpus}) = \underbrace{350\text{B}}_\text{Token Count} / \underbrace{1.6\text{TB}}_\text{Dataset Size} \approx 0.22 \text{tokens/B}$$
 
     #### Estimating Compute
 
-    GPU datasheets usually advertise their *theoretical* throughput values $\tau_\texttt{peak}$, which are rarely if ever met in practice. One way to correct for this discrepancy is to factor in **GPU Utilization** ($r_\texttt{GPU}$)
+    ##### Throughput and GPU Utilization
 
-    $$~\tau_\texttt{actual} = r_\texttt{GPU} \times \tau_\texttt{peak}$$
+    GPU datasheets usually advertise their *theoretical* throughput values $\tau_\texttt{peak}$, 
+    
+    These are rarely if ever met in practice.
+    
+    One way to correct for this discrepancy is to factor in **GPU utilization** ($r_\texttt{GPU}$)
 
-    In the regime where the **weight FLOPs** contribution dominates everything else (incl. layer renormalization, attention, residual connections, &c.), we can use the [Transformer FLOPs equation](https://medium.com/@dzmitrybahdanau/the-flops-calculus-of-language-model-training-3b19c1f025e4) (Kaplan *et al.*, 2020; Brown *et al.*, 2020) to estimate compute requirements ($C$) cf. [The FLOPs Calculus of Language Model Training](https://medium.com/@dzmitrybahdanau/the-flops-calculus-of-language-model-training-3b19c1f025e4) for additional details
+    $$~\tau_\texttt{actual} = r_\texttt{GPU} \cdot \tau_\texttt{peak}$$
 
-    $$C \approx 6 \times N \times D$$
+    As a rule of thumb, a well-optimized stack should be somewhere around `50%`.
+
+    ##### Training Requirements
+
+    The amount of compute we'll need for training is tied to the number of parameters in our model and the number of elementary operations needed to compute them.
+
+    In the regime where the **weight** FLOPs contribution dominates everything else, including layer renormalization, attention, residual connections, &c., we can use the [Transformer FLOPs equation](https://medium.com/@dzmitrybahdanau/the-flops-calculus-of-language-model-training-3b19c1f025e4) (Kaplan *et al.*, 2020; Brown *et al.*, 2020) to estimate compute requirements ($C$) cf. [The FLOPs Calculus of Language Model Training](https://medium.com/@dzmitrybahdanau/the-flops-calculus-of-language-model-training-3b19c1f025e4) for additional details.
+
+    Evaluating a forward pass involves roughly
+
+    $$C_\texttt{forward} \approx 2 \cdot N \cdot D$$
+
+    add-multiply operations, where the factor of 2 comes from the multiply-accumulate operation used in matrix multiplication.
+
+    Accounting for the backward pass (which is approximately 2x the compute of the forward pass)
+
+    $$C_\texttt{backward} \approx 4 \cdot N \cdot D$$
+
+    we finally get
+
+    $$C = C_\texttt{forward} + C_\texttt{backward} \approx 6 \cdot N \cdot D$$
+
+    While training, the typical bottleneck is GPU memory not compute. A popular method for exchanging memory for compute is to recompute activations for certain layers instead of storing them in GPU memory (Korthikanti *et al.*, 2022). 
+    
+    The upper bound on this recomputation is a full additional forward pass ($2 \cdot N \cdot D$) so that
+
+    $$C_\texttt{forward} \leq 4 \cdot N \cdot D$$
 
     #### Estimating Time
 
-    The **Theoretical Training Time** ($T_\texttt{theory}$) is just the ratio of the training compute requirements ($C$) and the *real* throughput calculated in the last section ($\tau_\texttt{actual}$):
+    ##### Training Time
+
+    Once we have the compute requirements for training our model we can actually estimate how long it will take to do it.
+
+    The **theoretical training time** ($T_\texttt{theory}$) is just the ratio of the training compute requirements ($C$) and the *real* throughput calculated in the last section ($\tau_\texttt{actual}$):
 
     $$T_\texttt{theory} = C / \tau_\texttt{actual}$$
 
-    Dividing by the **GPU Count**, we get the **Cluster Theoretical Training Time** ($T^\texttt{c}_\texttt{theory}$):
+    Dividing by the **GPU count**, we get the so-called **cluster theoretical training time** ($T^\texttt{c}_\texttt{theory}$):
 
     $$T^\texttt{c}_\texttt{theory} = T_\texttt{theory} / N_\texttt{GPU}$$
 
-    #### Accounting for Failures
+    ##### Accounting for Failures
 
-    Failures are inevitable. As Werner Vogels (Amazon CTO) is fond of saying:
+    What if one of the instances in our cluster fails? How will it affect the duration of our training run?
+
+    Well, for the most part, failures are unavoidable. As Werner Vogels (Amazon CTO) is fond of saying:
 
     > *"Everything fails, all the time"*
 
     Each time an instance fails, the cluster will have to work *extra time* to recover from downtime and recompute uncheckpointed work:
 
-    $$T^\texttt{c}_\texttt{total} = T^\texttt{c}_\texttt{theory} + T_\texttt{downtime} + T_\texttt{recompute}$$
+    $$T^\texttt{c}_\texttt{total} = T^\texttt{c}_\texttt{theory} + T_\texttt{downtime} + T_\texttt{recomp} = T^\texttt{c}_\texttt{theory} + F \cdot (t_\texttt{fail} + t_\texttt{recomp})$$
 
-    The expected number of failures will depend on the number of instance in our cluster, the cluster running time ($T^\texttt{c}_\texttt{total}$) and, of course, the failure rate ($f$)
+    where $F$ is the number of expected failures within our cluster.
 
-    $$F = f \times T^\texttt{c}_\texttt{total} \times N_\texttt{instances}$$
+    This will vary depending on the number of instances in our cluster ($N_\texttt{inst}$), the cluster uptime ($T^\texttt{c}_\texttt{total}$) and, of course, the failure rate ($f$)
 
-    We can use this estimate to compute the **Expected GPU Time in Failed State**
+    $$F = f \cdot T^\texttt{c}_\texttt{total} \cdot N_\texttt{inst}$$
 
-    $$F \times N_\texttt{GPU} \times t_\texttt{failure}$$
+    We can use this estimate to compute the expected **GPU time in a failed state**
 
-    and the **Expected GPU Time Recomputing Uncheckpointed Work**
+    $$F \cdot N_\texttt{GPU} \cdot t_\texttt{fail}$$
 
-    $$F \times N_\texttt{GPU} / (2 \times f_\texttt{checkpoint})$$
+    and the expected **GPU time recomputing uncheckpointed work**
 
-    where $t_\texttt{failure}$ is the **Failure Recovery Time** and $f_\texttt{checkpoint}$ is the **Checkpoint Frequency**.
+    $$F \cdot N_\texttt{GPU} \cdot t_\texttt{recomp}$$
 
-    Combining everything, we get a formula for the *real* cluster training time ($T^\texttt{c}_\texttt{total}$)
+    where $t_\texttt{fail}$ is the failure recovery time, $t_\texttt{recomp} = 1 / 2 \cdot f_\texttt{chkpt}$ is the time needed to recompute after each failure event and $f_\texttt{chkpt}$ is the checkpoint frequency.
 
-    $$T^\texttt{c}_\texttt{total} = T^\texttt{c}_\texttt{theory} / [1 - f \times N_\texttt{instances} \times (t_\texttt{failure} + t_\texttt{checkpoint})]$$
+    By combining everything, we get a formula for the *real* cluster training time ($T^\texttt{c}_\texttt{total}$)
+
+    $$T^\texttt{c}_\texttt{total} = T^\texttt{c}_\texttt{theory} / [1 - f \cdot N_\texttt{inst} \cdot (t_\texttt{fail} + t_\texttt{checkpoint})]$$
 
     #### References
 
-    * (Shoeybi *et al.*, 2019) [Megratron-LM: Training Multi-Billion Parameter Language Models Using Model Parallelism](https://arxiv.org/abs/1909.08053)
-    * (Kaplan *et al.*, 2020) [Scaling Laws for Neural Language Models](https://arxiv.org/abs/2001.08361)
     * (Brown *et al.*, 2020) [Language Models are Few-Shot Learners](https://arxiv.org/abs/2005.14165)
     * (Hoffmann *et al.*, 2022) [Training Compute-Optimal Large Language Models](https://arxiv.org/abs/2203.15556)
-    """
+    * (Kaplan *et al.*, 2020) [Scaling Laws for Neural Language Models](https://arxiv.org/abs/2001.08361)
+    * (Korthikanti *et al.*, 2022) [Reducing Activation Recomputation in Large Transformer Models](https://arxiv.org/abs/2205.05198)
+    * (Shoeybi *et al.*, 2019) [Megratron-LM: Training Multi-Billion Parameter Language Models Using Model Parallelism](https://arxiv.org/abs/1909.08053)"""
 
 # Instance Count
 
@@ -306,30 +366,30 @@ data_size_in_GB = data_size(
     st.session_state.tokens_per_byte_ratio,
 )
 
-# Actual Performance (TFLOPs/GPU)
+# Actual Performance (TFLOP/s per GPU)
 
 @st.cache_data
-def actual_performance(peak_perf_in_TFLOPs_per_gpu, gpu_utilization):
+def actual_performance(peak_perf_in_TFLOP_s_per_gpu, gpu_utilization):
     """
-    Returns actual TFLOPs per GPU based on peak performance and GPU utilization
+    Returns actual TFLOP/s per GPU based on peak performance and GPU utilization
     """
-    return peak_perf_in_TFLOPs_per_gpu * gpu_utilization / 100
+    return peak_perf_in_TFLOP_s_per_gpu * gpu_utilization / 100
 
-actual_perf_in_TFLOPs_per_gpu = actual_performance(
-    st.session_state.peak_perf_in_TFLOPs_per_gpu,
+actual_perf_in_TFLOP_s_per_gpu = actual_performance(
+    st.session_state.peak_perf_in_TFLOP_s_per_gpu,
     st.session_state.gpu_utilization
 )
 
-# Training Compute Requirements (TFLOPs)
+# Training Compute Requirements (TFLOP)
 
 @st.cache_data
 def train_compute_requirements(model_size_in_B, data_size_in_Gtokens):
     """
-    Returns training TFLOPs requirements based on the size of the model and training data
+    Returns training TFLOP requirements based on the size of the model and training data
     """
     return 6 * model_size_in_B * 1e9 * data_size_in_Gtokens * 1e9 / 1e12
 
-train_comp_reqs_in_TFLOPs = train_compute_requirements(
+train_comp_reqs_in_TFLOP = train_compute_requirements(
     st.session_state.model_size_in_B,
     st.session_state.data_size_in_Gtokens,
 )
@@ -337,15 +397,15 @@ train_comp_reqs_in_TFLOPs = train_compute_requirements(
 # Theoretical Training Time (GPU-hours)
 
 @st.cache_data
-def theoretical_training_time(train_comp_reqs_in_TFLOPs, actual_perf_in_TFLOPs_per_gpu):
+def theoretical_training_time(train_comp_reqs_in_TFLOP, actual_perf_in_TFLOP_s_per_gpu):
     """
     Returns the *theoretical* training time in GPU-hours
     """
-    return train_comp_reqs_in_TFLOPs / actual_perf_in_TFLOPs_per_gpu / 3600
+    return train_comp_reqs_in_TFLOP / actual_perf_in_TFLOP_s_per_gpu / 3600
 
 t_train_time_in_gpu_hours = theoretical_training_time(
-    train_comp_reqs_in_TFLOPs,
-    actual_perf_in_TFLOPs_per_gpu
+    train_comp_reqs_in_TFLOP,
+    actual_perf_in_TFLOP_s_per_gpu
 )
 
 # Cluster Theoretical Training Time (days)
@@ -483,7 +543,7 @@ st.markdown(f"""
        <b>Actual Performance</b>
     </td>
     <td>
-       <code>{actual_perf_in_TFLOPs_per_gpu:,} TFLOPs/s/GPU</code>
+       <code>{actual_perf_in_TFLOP_s_per_gpu:,} TFLOP/s/GPU</code>
     </td>
   </tr>
   <tr>
@@ -491,7 +551,7 @@ st.markdown(f"""
        <b>Training Compute Requirements</b>
     </td>
     <td>
-       <code>{train_comp_reqs_in_TFLOPs:.2E} TFLOPs</code>
+       <code>{train_comp_reqs_in_TFLOP:.2E} TFLOP</code>
     </td>
   </tr>
   <tr>
@@ -738,7 +798,7 @@ st.markdown(f"""
 
 #### Blogs ✍️
 
-* [The FLOPS Calculus of Language Model Training](https://medium.com/@dzmitrybahdanau/the-flops-calculus-of-language-model-training-3b19c1f025e4) by Dzmitry Bahdanau
+* [The FLOPs Calculus of Language Model Training](https://medium.com/@dzmitrybahdanau/the-flops-calculus-of-language-model-training-3b19c1f025e4) by Dzmitry Bahdanau
 * [Transformer Math 101](https://blog.eleuther.ai/transformer-math/) by EleutherAI
 * [Transformer Inference Arithmetic](https://kipp.ly/transformer-inference-arithmetic/) by Kipply
 * [New Scaling Laws for Large Language Models](https://www.lesswrong.com/posts/midXmMb2Xg37F2Kgn/new-scaling-laws-for-large-language-models) by LessWrong
