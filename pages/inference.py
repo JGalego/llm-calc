@@ -437,28 +437,27 @@ st.markdown(f"""
 <table>
 <br>""", unsafe_allow_html=True)
 
-"""
-### Want to learn more?
+with st.expander("Want to learn more?"):
+    """
+    #### Articles 📚
 
-#### Articles 📚
+    * (Ivanov *et al.*, 2020) [Data Movement is All You Need: A Case Study for Optimizing Transformers](https://arxiv.org/abs/2007.00072)
+    * (Kaplan *et al.*, 2020) [Scaling Laws for Neural Language Models](https://arxiv.org/abs/2001.08361)
+    * (Ouyang *et al.*, 2023) [Understanding the Performance of Transformer Inference](https://dspace.mit.edu/bitstream/handle/1721.1/151543/ouyang-aouyang-meng-eecs-2023-thesis.pdf?sequence=1&isAllowed=y)
+    * (Pope *et al.*, 2022) [Efficiently Scaling Transformer Inference](https://arxiv.org/abs/2211.05102)
+    * (Sheng *et al.*, 2023) [FlexGen: High-Throughput Generative Inference of Large Language Models with a Single GPU](https://arxiv.org/abs/2303.06865)
+    * (Tay *et al.*, 2020) [Efficient Transformers: A Survey](https://arxiv.org/abs/2009.06732)
 
-* (Ivanov *et al.*, 2020) [Data Movement is All You Need: A Case Study for Optimizing Transformers](https://arxiv.org/abs/2007.00072)
-* (Kaplan *et al.*, 2020) [Scaling Laws for Neural Language Models](https://arxiv.org/abs/2001.08361)
-* (Ouyang *et al.*, 2023) [Understanding the Performance of Transformer Inference](https://dspace.mit.edu/bitstream/handle/1721.1/151543/ouyang-aouyang-meng-eecs-2023-thesis.pdf?sequence=1&isAllowed=y)
-* (Pope *et al.*, 2022) [Efficiently Scaling Transformer Inference](https://arxiv.org/abs/2211.05102)
-* (Sheng *et al.*, 2023) [FlexGen: High-Throughput Generative Inference of Large Language Models with a Single GPU](https://arxiv.org/abs/2303.06865)
-* (Tay *et al.*, 2020) [Efficient Transformers: A Survey](https://arxiv.org/abs/2009.06732)
+    #### Blogs ✍️
 
-#### Blogs ✍️
-
-* [LLM Parameter Counting](https://kipp.ly/transformer-param-count/) by Kipply
-* [Transformer Inference Arithmetic](https://kipp.ly/transformer-inference-arithmetic/) by Kipply
-* [Making Deep Learning Go Brrrr From First Principles](https://horace.io/brrr_intro.html) by Horace He
-* [Large Transformer Model Inference Optimization](https://lilianweng.github.io/posts/2023-01-10-inference-optimization/) by Lil'Log
-* [How is LLaMa.cpp possible?](https://finbarr.ca/how-is-llama-cpp-possible/) by Finbarr Timbers
-* [Decoding Transformers on Edge Devices](https://www.axelera.ai/decoding-transformers-on-edge-devices/) by Axelera
-* [GPT in 60 Lines of NumPy](https://jaykmody.com/blog/gpt-from-scratch/) by Jay Mody
-* [Speeding up the GPT - KV cache](https://www.dipkumar.dev/becoming-the-unbeatable/posts/gpt-kvcache/) by dipkumar
-* [Dissecting Batching Effects in GPT Inference](https://le.qun.ch/en/blog/2023/05/13/transformer-batching/) by Lequn Chen
-* [Accelerated Inference for Large Transformer Models Using NVIDIA Triton Inference Server](https://developer.nvidia.com/blog/accelerated-inference-for-large-transformer-models-using-nvidia-fastertransformer-and-nvidia-triton-inference-server/) by Nvidia
-"""
+    * [LLM Parameter Counting](https://kipp.ly/transformer-param-count/) by Kipply
+    * [Transformer Inference Arithmetic](https://kipp.ly/transformer-inference-arithmetic/) by Kipply
+    * [Making Deep Learning Go Brrrr From First Principles](https://horace.io/brrr_intro.html) by Horace He
+    * [Large Transformer Model Inference Optimization](https://lilianweng.github.io/posts/2023-01-10-inference-optimization/) by Lil'Log
+    * [How is LLaMa.cpp possible?](https://finbarr.ca/how-is-llama-cpp-possible/) by Finbarr Timbers
+    * [Decoding Transformers on Edge Devices](https://www.axelera.ai/decoding-transformers-on-edge-devices/) by Axelera
+    * [GPT in 60 Lines of NumPy](https://jaykmody.com/blog/gpt-from-scratch/) by Jay Mody
+    * [Speeding up the GPT - KV cache](https://www.dipkumar.dev/becoming-the-unbeatable/posts/gpt-kvcache/) by dipkumar
+    * [Dissecting Batching Effects in GPT Inference](https://le.qun.ch/en/blog/2023/05/13/transformer-batching/) by Lequn Chen
+    * [Accelerated Inference for Large Transformer Models Using NVIDIA Triton Inference Server](https://developer.nvidia.com/blog/accelerated-inference-for-large-transformer-models-using-nvidia-fastertransformer-and-nvidia-triton-inference-server/) by Nvidia
+    """
