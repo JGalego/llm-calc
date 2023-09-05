@@ -1,2 +1,2 @@
 [MESSAGES CONTROL]
-disable=invalid-name,line-too-long,pointless-statement,pointless-string-statement,redefined-outer-name
+disable=invalid-name,line-too-long,pointless-statement,pointless-string-statement,redefined-outer-name,too-many-arguments
